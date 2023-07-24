@@ -80,5 +80,6 @@
     "access": "public"
   },
   "jsdelivr": "./dist/transformers.min.js",
-  "unpkg": "./dist/transformers.min.js"
+  "unpkg": "./dist/transformers.min.js",
+  "sideEffects": false
 }
