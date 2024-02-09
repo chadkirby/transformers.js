@@ -11,13 +11,13 @@
 /**
  * Helper function to dispatch progress callbacks.
  *
- * @param {function} progress_callback The progress callback function to dispatch.
+ * @param {Function} progress_callback The progress callback function to dispatch.
  * @param {any} data The data to pass to the progress callback function.
  * @returns {void}
  * @private
  */
 export function dispatchCallback(progress_callback, data) {
-    if (progress_callback !== null) progress_callback(data);
+    if (progress_callback) progress_callback(data);
 }
 
 /**
@@ -76,17 +76,6 @@ export const Callable = /** @type {any} */ (class {
     }
 });
 
-
-/**
- * Check if a value is a string.
- * @param {*} text The value to check.
- * @returns {boolean} True if the value is a string, false otherwise.
- */
-export function isString(text) {
-    return typeof text === 'string' || text instanceof String
-}
-
-
 /**
  * Check if a value is a typed array.
  * @param {*} val The value to check.
@@ -120,8 +109,8 @@ export function exists(x) {
 /**
  * Calculates the dimensions of a nested array.
  *
- * @param {Array} arr The nested array to calculate dimensions for.
- * @returns {Array} An array containing the dimensions of the input array.
+ * @param {any[]} arr The nested array to calculate dimensions for.
+ * @returns {number[]} An array containing the dimensions of the input array.
  */
 export function calculateDimensions(arr) {
     const dimensions = [];
@@ -156,9 +145,31 @@ export function pop(obj, key, defaultValue = undefined) {
 /**
  * Efficiently merge arrays, creating a new copy.
  * Adapted from https://stackoverflow.com/a/6768642/13989043
- * @param  {...any} arrs Arrays to merge.
- * @returns The merged array.
+ * @param  {Array[]} arrs Arrays to merge.
+ * @returns {Array} The merged array.
  */
 export function mergeArrays(...arrs) {
     return Array.prototype.concat.apply([], arrs);
+}
+
+/**
+ * Compute the Cartesian product of given arrays
+ * @param {...Array} a Arrays to compute the product
+ * @returns {Array} Returns the computed Cartesian product as an array
+ * @private
+ */
+export function product(...a) {
+    // Cartesian product of items
+    // Adapted from https://stackoverflow.com/a/43053803
+    return a.reduce((a, b) => a.flatMap(d => b.map(e => [d, e])));
+}
+
+/**
+ * Calculates the index offset for a given index and window size.
+ * @param {number} i The index.
+ * @param {number} w The window size.
+ * @returns {number} The index offset.
+ */
+export function calculateReflectOffset(i, w) {
+    return Math.abs((i + w) % (2 * w) - w);
 }

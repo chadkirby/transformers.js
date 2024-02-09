@@ -1,7 +1,7 @@
 
 import { pipeline, cos_sim } from '../src/transformers.js';
 import { init, m, MAX_TEST_EXECUTION_TIME } from './init.js';
-import { compare } from './test_utils.js';
+import { compare, loadAudio } from './test_utils.js';
 
 // Initialise the testing environment
 init();
@@ -18,8 +18,10 @@ describe('Pipelines', () => {
         // List all models which will be tested
         const models = [
             'distilbert-base-uncased-finetuned-sst-2-english',
+            'Xenova/toxic-bert',
         ];
 
+        // single_label_classification
         it(models[0], async () => {
             let classifier = await pipeline('text-classification', m(models[0]));
             let texts = [
@@ -82,6 +84,27 @@ describe('Pipelines', () => {
             await classifier.dispose();
 
         }, MAX_TEST_EXECUTION_TIME);
+
+        // multi_label_classification
+        it(models[1], async () => {
+            let classifier = await pipeline('text-classification', m(models[1]));
+            let texts = [
+                "I like you. I love you", // low scores
+                "I hate you." // high scores
+            ];
+
+            // single
+            {
+                let outputs = await classifier(texts);
+                let expected = [
+                    { label: 'toxic', score: 0.0007729064091108739 },
+                    { label: 'toxic', score: 0.9475088119506836 }
+                ]
+                compare(outputs, expected);
+            }
+        }, MAX_TEST_EXECUTION_TIME);
+
+
     });
 
     describe('Token classification', () => {
@@ -225,34 +248,34 @@ describe('Pipelines', () => {
                 let outputs = await unmasker(texts[0]);
                 let expected = [
                     {
-                        score: 0.9496445655822754,
+                        score: 0.9405396580696106,
                         token: 2051,
                         token_str: 'time',
                         sequence: 'once upon a time.'
                     },
                     {
-                        score: 0.01029531005769968,
+                        score: 0.01182964164763689,
                         token: 13342,
                         token_str: 'mattress',
                         sequence: 'once upon a mattress.'
                     },
                     {
-                        score: 0.0013969476567581296,
+                        score: 0.0017291896510869265,
                         token: 6480,
                         token_str: 'lifetime',
                         sequence: 'once upon a lifetime.'
                     },
                     {
-                        score: 0.0008216543938033283,
+                        score: 0.0010079898638650775,
                         token: 2504,
                         token_str: 'level',
                         sequence: 'once upon a level.'
                     },
                     {
-                        score: 0.0007674929802305996,
-                        token: 2940,
-                        token_str: 'hill',
-                        sequence: 'once upon a hill.'
+                        score: 0.0009655007743276656,
+                        token: 2154,
+                        token_str: 'day',
+                        sequence: 'once upon a day.'
                     }
                 ];
                 compare(outputs, expected);
@@ -266,65 +289,66 @@ describe('Pipelines', () => {
 
                 let expected = [[
                     {
-                        score: 0.9918821454048157,
+                        score: 0.9900539517402649,
                         token: 2051,
                         token_str: 'time',
                         sequence: 'once upon a time.'
                     },
                     {
-                        score: 0.0010219492251053452,
+                        score: 0.0012258145725354552,
                         token: 13342,
                         token_str: 'mattress',
                         sequence: 'once upon a mattress.'
                     },
                     {
-                        score: 0.00024931252119131386,
+                        score: 0.0002977887343149632,
                         token: 2096,
                         token_str: 'while',
                         sequence: 'once upon a while.'
                     },
                     {
-                        score: 0.00015193592116702348,
-                        token: 2558,
-                        token_str: 'period',
-                        sequence: 'once upon a period.'
-                    },
-                    {
-                        score: 0.00015131247346289456,
+                        score: 0.0001899998023873195,
                         token: 6480,
                         token_str: 'lifetime',
                         sequence: 'once upon a lifetime.'
-                    }
-                ], [
+                    },
                     {
-                        score: 0.29160282015800476,
+                        score: 0.00017618606216274202,
+                        token: 2558,
+                        token_str: 'period',
+                        sequence: 'once upon a period.'
+                    }
+                ],
+                [
+                    {
+                        score: 0.2863538861274719,
                         token: 2414,
                         token_str: 'london',
                         sequence: 'london is the capital of england.'
                     },
                     {
-                        score: 0.06457117199897766,
+                        score: 0.0607745461165905,
                         token: 2009,
                         token_str: 'it',
                         sequence: 'it is the capital of england.'
                     },
                     {
-                        score: 0.031988438218832016,
+                        score: 0.037455108016729355,
                         token: 6484,
                         token_str: 'birmingham',
                         sequence: 'birmingham is the capital of england.'
                     },
                     {
-                        score: 0.0317111536860466,
-                        token: 7067,
-                        token_str: 'bristol',
-                        sequence: 'bristol is the capital of england.'
-                    },
-                    {
-                        score: 0.030000191181898117,
+                        score: 0.029375044628977776,
                         token: 5087,
                         token_str: 'manchester',
                         sequence: 'manchester is the capital of england.'
+                    },
+                    {
+                        score: 0.0292277242988348,
+                        token: 7067,
+                        token_str: 'bristol',
+                        sequence: 'bristol is the capital of england.'
                     }
                 ]];
 
@@ -544,7 +568,7 @@ describe('Pipelines', () => {
                     do_sample: false
                 });
                 expect(outputs).toHaveLength(1);
-                expect(outputs[0].length).toBeGreaterThan(10);
+                expect(outputs[0].generated_text.length).toBeGreaterThan(1);
             }
 
             await generator.dispose();
@@ -569,7 +593,7 @@ describe('Pipelines', () => {
                     do_sample: false
                 });
                 expect(outputs).toHaveLength(1);
-                expect(outputs[0].length).toBeGreaterThan(10);
+                expect(outputs[0].generated_text.length).toBeGreaterThan(10);
             }
             await generator.dispose();
         }, MAX_TEST_EXECUTION_TIME);
@@ -704,31 +728,16 @@ describe('Pipelines', () => {
 
     describe('Speech-to-text generation', () => {
 
-        const loadAudio = async (url) => {
-            // NOTE: Since the Web Audio API is not available in Node.js, we will need to use the `wavefile` library to obtain the raw audio data.
-            // For more information, see: https://huggingface.co/docs/transformers.js/tutorials/node-audio-processing
-            let wavefile = (await import('wavefile')).default;
-
-            // Load audio data
-            let buffer = Buffer.from(await fetch(url).then(x => x.arrayBuffer()))
-
-            // Read .wav file and convert it to required format
-            let wav = new wavefile.WaveFile(buffer);
-            wav.toBitDepth('32f'); // Pipeline expects input as a Float32Array
-            wav.toSampleRate(16000); // Whisper expects audio with a sampling rate of 16000
-            let audioData = wav.getSamples();
-            if (Array.isArray(audioData)) {
-                // For this demo, if there are multiple channels for the audio file, we just select the first one.
-                // In practice, you'd probably want to convert all channels to a single channel (e.g., stereo -> mono).
-                audioData = audioData[0];
-            }
-            return audioData;
-        }
         // List all models which will be tested
         const models = [
+            // whisper
             'openai/whisper-tiny.en', // English-only
             'openai/whisper-small', // Multilingual
             ['openai/whisper-tiny.en', 'output_attentions'], // English-only + `output_attentions`
+            ['openai/whisper-small', 'output_attentions'], // Multilingual + `output_attentions`
+
+            // wav2vec2
+            'jonatasgrosman/wav2vec2-large-xlsr-53-english',
         ];
 
         it(models[0], async () => {
@@ -824,6 +833,148 @@ describe('Pipelines', () => {
             }
 
             await transcriber.dispose();
+
+        }, MAX_TEST_EXECUTION_TIME);
+
+        it(models[3].join(' + '), async () => {
+            let transcriber = await pipeline('automatic-speech-recognition', m(models[3][0]), {
+                revision: models[3][1],
+            });
+
+            let url = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/japanese-audio.wav';
+            let audioData = await loadAudio(url);
+
+            { // Transcribe Japanese w/ word-level timestamps.
+                let output = await transcriber(audioData, { return_timestamps: 'word', language: 'japanese', task: 'transcribe' });
+                const target = {
+                    "text": "モリナガの美味しい牛乳は濃い青色に牛乳瓶を払ったゼザインのパック牛乳である。",
+                    "chunks": [
+                        { "text": "モ", "timestamp": [0, 0.56] },
+                        { "text": "リ", "timestamp": [0.56, 0.64] },
+                        { "text": "ナ", "timestamp": [0.64, 0.8] },
+                        { "text": "ガ", "timestamp": [0.8, 0.88] },
+                        { "text": "の", "timestamp": [0.88, 1.04] },
+                        { "text": "美味", "timestamp": [1.04, 1.22] },
+                        { "text": "しい", "timestamp": [1.22, 1.46] },
+                        { "text": "牛", "timestamp": [1.46, 1.76] },
+                        { "text": "乳", "timestamp": [1.76, 1.94] },
+                        { "text": "は", "timestamp": [1.94, 2.14] },
+                        { "text": "濃", "timestamp": [2.14, 2.34] },
+                        { "text": "い", "timestamp": [2.34, 2.48] },
+                        { "text": "青", "timestamp": [2.48, 2.62] },
+                        { "text": "色", "timestamp": [2.62, 2.84] },
+                        { "text": "に", "timestamp": [2.84, 3] },
+                        { "text": "牛", "timestamp": [3, 3.22] },
+                        { "text": "乳", "timestamp": [3.22, 3.42] },
+                        { "text": "瓶", "timestamp": [3.42, 3.58] },
+                        { "text": "を", "timestamp": [3.58, 3.82] },
+                        { "text": "払", "timestamp": [3.82, 4] },
+                        { "text": "った", "timestamp": [4, 4.32] },
+                        { "text": "ゼ", "timestamp": [4.32, 4.56] },
+                        { "text": "ザ", "timestamp": [4.56, 4.6] },
+                        { "text": "イ", "timestamp": [4.6, 4.74] },
+                        { "text": "ン", "timestamp": [4.74, 4.8] },
+                        { "text": "の", "timestamp": [4.8, 4.94] },
+                        { "text": "パ", "timestamp": [4.94, 5.12] },
+                        { "text": "ック", "timestamp": [5.12, 5.26] },
+                        { "text": "牛", "timestamp": [5.26, 5.52] },
+                        { "text": "乳", "timestamp": [5.52, 5.72] },
+                        { "text": "で", "timestamp": [5.72, 5.86] },
+                        { "text": "ある。", "timestamp": [5.86, 6.62] }
+                    ]
+                }
+
+                compare(output, target);
+            }
+
+            await transcriber.dispose();
+
+        }, MAX_TEST_EXECUTION_TIME);
+
+
+        it(models[4], async () => {
+            let transcriber = await pipeline('automatic-speech-recognition', m(models[4]));
+
+            let url = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/jfk.wav';
+            let audioData = await loadAudio(url);
+
+            { // Transcribe
+                let output = await transcriber(audioData);
+                expect(output.text.length).toBeGreaterThan(50);
+                // { text: "and so my fellow america ask not what your country can do for you ask what you can do for your country" }
+            }
+
+            await transcriber.dispose();
+
+        }, MAX_TEST_EXECUTION_TIME);
+    });
+
+    describe('Text-to-speech generation', () => {
+
+        // List all models which will be tested
+        const models = [
+            'microsoft/speecht5_tts',
+            'facebook/mms-tts-fra',
+        ];
+
+        it(models[0], async () => {
+            let synthesizer = await pipeline('text-to-speech', m(models[0]), {
+                // NOTE: Although the quantized version produces incoherent results,
+                // it it is okay to use for testing.
+                // quantized: false,
+            });
+
+            let speaker_embeddings = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin';
+
+            { // Generate English speech
+                let output = await synthesizer('Hello, my dog is cute', { speaker_embeddings });
+                expect(output.audio.length).toBeGreaterThan(0);
+                expect(output.sampling_rate).toEqual(16000);
+            }
+
+            await synthesizer.dispose();
+
+        }, MAX_TEST_EXECUTION_TIME);
+
+        it(models[1], async () => {
+            let synthesizer = await pipeline('text-to-speech', m(models[1]));
+
+            { // Generate French speech
+                let output = await synthesizer('Bonjour');
+                expect(output.audio.length).toBeGreaterThan(0);
+                expect(output.sampling_rate).toEqual(16000);
+            }
+
+            await synthesizer.dispose();
+
+        }, MAX_TEST_EXECUTION_TIME);
+
+    });
+
+    describe('Audio classification', () => {
+
+        // List all models which will be tested
+        const models = [
+            'alefiury/wav2vec2-large-xlsr-53-gender-recognition-librispeech',
+        ];
+
+        it(models[0], async () => {
+            let classifier = await pipeline('audio-classification', m(models[0]));
+
+            let url = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/jfk.wav';
+            let audioData = await loadAudio(url);
+
+            { // Classify audio
+                let outputs = await classifier(audioData);
+
+                let expected = [
+                    { 'score': 0.997512936592102, 'label': 'male' },
+                    { 'score': 0.0024870133493095636, 'label': 'female' }
+                ];
+                compare(outputs, expected);
+            }
+
+            await classifier.dispose();
 
         }, MAX_TEST_EXECUTION_TIME);
 
@@ -1013,6 +1164,7 @@ describe('Pipelines', () => {
         // List all models which will be tested
         const models = [
             'facebook/detr-resnet-50-panoptic',
+            'mattmdjaga/segformer_b2_clothes',
         ];
 
         it(models[0], async () => {
@@ -1044,6 +1196,47 @@ describe('Pipelines', () => {
             await segmenter.dispose();
 
         }, MAX_TEST_EXECUTION_TIME);
+
+        it(models[1], async () => {
+            let segmenter = await pipeline('image-segmentation', m(models[1]));
+            let img = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/young-man-standing-and-leaning-on-car.jpg';
+
+            // single
+            {
+                let outputs = await segmenter(img);
+
+                let expected = [
+                    { label: 'Background' },
+                    { label: 'Hair' },
+                    { label: 'Upper-clothes' },
+                    { label: 'Pants' },
+                    { label: 'Left-shoe' },
+                    { label: 'Right-shoe' },
+                    { label: 'Face' },
+                    { label: 'Left-leg' },
+                    { label: 'Right-leg' },
+                    { label: 'Left-arm' },
+                    { label: 'Right-arm' },
+                ];
+
+                let outputLabels = outputs.map(x => x.label);
+                let expectedLabels = expected.map(x => x.label);
+
+                expect(outputLabels).toHaveLength(expectedLabels.length);
+                expect(outputLabels.sort()).toEqual(expectedLabels.sort())
+
+                // check that all scores are null, and masks have correct dimensions
+                for (let output of outputs) {
+                    expect(output.score).toBeNull();
+                    expect(output.mask.width).toEqual(970);
+                    expect(output.mask.height).toEqual(1455);
+                    expect(output.mask.channels).toEqual(1);
+                }
+            }
+
+            await segmenter.dispose();
+
+        }, MAX_TEST_EXECUTION_TIME);
     });
 
     describe('Zero-shot image classification', () => {
@@ -1070,9 +1263,9 @@ describe('Pipelines', () => {
                 let output = await classifier(url, classes);
 
                 let expected = [
-                    { "score": 0.992206871509552, "label": "football" },
-                    { "score": 0.0013248942559584975, "label": "airport" },
-                    { "score": 0.006468251813203096, "label": "animals" }
+                    { score: 0.9719080924987793, label: 'football' },
+                    { score: 0.022564826533198357, label: 'animals' },
+                    { score: 0.005527070723474026, label: 'airport' }
                 ]
                 compare(output, expected, 0.1);
 
@@ -1085,17 +1278,17 @@ describe('Pipelines', () => {
 
                 let expected = [
                     [
-                        { "score": 0.9919875860214233, "label": "football" },
-                        { "score": 0.0012227334082126617, "label": "airport" },
-                        { "score": 0.006789708975702524, "label": "animals" }
+                        { score: 0.9712504148483276, label: 'football' },
+                        { score: 0.022469401359558105, label: 'animals' },
+                        { score: 0.006280169822275639, label: 'airport' }
                     ], [
-                        { "score": 0.0003043194592464715, "label": "football" },
-                        { "score": 0.998708188533783, "label": "airport" },
-                        { "score": 0.0009874969255179167, "label": "animals" }
+                        { score: 0.997433602809906, label: 'airport' },
+                        { score: 0.0016500800848007202, label: 'animals' },
+                        { score: 0.0009163151844404638, label: 'football' }
                     ], [
-                        { "score": 0.015163016505539417, "label": "football" },
-                        { "score": 0.016037866473197937, "label": "airport" },
-                        { "score": 0.9687991142272949, "label": "animals" }
+                        { score: 0.9851226806640625, label: 'animals' },
+                        { score: 0.007516484707593918, label: 'football' },
+                        { score: 0.007360846735537052, label: 'airport' }
                     ]
                 ];
                 compare(output, expected, 0.1);
@@ -1216,4 +1409,207 @@ describe('Pipelines', () => {
             await detector.dispose();
         }, MAX_TEST_EXECUTION_TIME);
     });
+
+    describe('Zero-shot object detection', () => {
+
+        // List all models which will be tested
+        const models = [
+            'google/owlvit-base-patch32',
+        ];
+
+        it(models[0], async () => {
+            let detector = await pipeline('zero-shot-object-detection', m(models[0]));
+
+
+            // single (default)
+            {
+                let url = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/astronaut.png';
+                let candidate_labels = ['human face', 'rocket', 'helmet', 'american flag'];
+
+                let output = await detector(url, candidate_labels);
+
+                // let expected = [
+                //     {
+                //         score: 0.24392342567443848,
+                //         label: 'human face',
+                //         box: { xmin: 180, ymin: 67, xmax: 274, ymax: 175 }
+                //     },
+                //     {
+                //         score: 0.15129457414150238,
+                //         label: 'american flag',
+                //         box: { xmin: 0, ymin: 4, xmax: 106, ymax: 513 }
+                //     },
+                //     {
+                //         score: 0.13649864494800568,
+                //         label: 'helmet',
+                //         box: { xmin: 277, ymin: 337, xmax: 511, ymax: 511 }
+                //     },
+                //     {
+                //         score: 0.10262022167444229,
+                //         label: 'rocket',
+                //         box: { xmin: 352, ymin: -1, xmax: 463, ymax: 287 }
+                //     }
+                // ]
+
+                expect(output.length).toBeGreaterThan(0);
+                for (let cls of output) {
+                    expect(typeof cls.score).toBe('number');
+                    expect(typeof cls.label).toBe('string');
+                    for (let key of ['xmin', 'ymin', 'xmax', 'ymax']) {
+                        expect(typeof cls.box[key]).toBe('number');
+                    }
+                }
+            }
+
+            // topk + threshold + percentage
+            {
+                let url = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/beach.png';
+                let candidate_labels = ['hat', 'book', 'sunglasses', 'camera'];
+
+                let output = await detector(url, candidate_labels, {
+                    topk: 4,
+                    threshold: 0.05,
+                    percentage: true,
+                });
+
+                // let expected = [
+                //     {
+                //         score: 0.1606510728597641,
+                //         label: 'sunglasses',
+                //         box: { xmin: 347, ymin: 229, xmax: 429, ymax: 264 }
+                //     },
+                //     {
+                //         score: 0.08935828506946564,
+                //         label: 'hat',
+                //         box: { xmin: 38, ymin: 174, xmax: 258, ymax: 364 }
+                //     },
+                //     {
+                //         score: 0.08530698716640472,
+                //         label: 'camera',
+                //         box: { xmin: 187, ymin: 350, xmax: 260, ymax: 411 }
+                //     },
+                //     {
+                //         score: 0.08349756896495819,
+                //         label: 'book',
+                //         box: { xmin: 261, ymin: 280, xmax: 494, ymax: 425 }
+                //     }
+                // ]
+
+                expect(output.length).toBeGreaterThan(0);
+                for (let cls of output) {
+                    expect(typeof cls.score).toBe('number');
+                    expect(typeof cls.label).toBe('string');
+                    for (let key of ['xmin', 'ymin', 'xmax', 'ymax']) {
+                        expect(typeof cls.box[key]).toBe('number');
+                    }
+                }
+            }
+
+            await detector.dispose();
+        }, MAX_TEST_EXECUTION_TIME);
+    });
+
+    describe('Image-to-image', () => {
+
+        // List all models which will be tested
+        const models = [
+            'caidas/swin2SR-classical-sr-x2-64',
+        ];
+
+        it(models[0], async () => {
+            let upscaler = await pipeline('image-to-image', m(models[0]));
+
+            // Input is 3x3 => padded to 8x8 => upscaled to 16x16
+            let url = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/pattern_3x3.png';
+
+            // single
+            {
+                let outputs = await upscaler(url);
+                expect(outputs.width).toEqual(16);
+                expect(outputs.height).toEqual(16);
+                expect(outputs.channels).toEqual(3);
+                expect(outputs.data).toHaveLength(768);
+            }
+
+            // batched
+            {
+                let outputs = await upscaler([url, url]);
+                expect(outputs).toHaveLength(2);
+                for (let output of outputs) {
+                    expect(output.width).toEqual(16);
+                    expect(output.height).toEqual(16);
+                    expect(output.channels).toEqual(3);
+                    expect(output.data).toHaveLength(768);
+                }
+            }
+
+            await upscaler.dispose();
+        }, MAX_TEST_EXECUTION_TIME);
+    });
+
+
+    describe('Depth estimation', () => {
+
+        // List all models which will be tested
+        const models = [
+            'Intel/dpt-hybrid-midas',
+        ];
+
+        it(models[0], async () => {
+            let depth_estimator = await pipeline('depth-estimation', m(models[0]));
+
+            let url = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/cats.jpg';
+
+            // single
+            {
+                let { predicted_depth, depth } = await depth_estimator(url);
+                compare(predicted_depth.dims, [384, 384]);
+                expect(depth.width).toEqual(640);
+                expect(depth.height).toEqual(480);
+                expect(depth.channels).toEqual(1);
+                expect(depth.data).toHaveLength(307200);
+            }
+
+            // batched
+            {
+                let outputs = await depth_estimator([url, url]);
+                expect(outputs).toHaveLength(2);
+                for (let output of outputs) {
+                    let { predicted_depth, depth } = output;
+                    compare(predicted_depth.dims, [384, 384]);
+                    expect(depth.width).toEqual(640);
+                    expect(depth.height).toEqual(480);
+                    expect(depth.channels).toEqual(1);
+                    expect(depth.data).toHaveLength(307200);
+                }
+            }
+
+            await depth_estimator.dispose();
+        }, MAX_TEST_EXECUTION_TIME);
+    });
+
+    describe('Document question answering', () => {
+
+        // List all models which will be tested
+        const models = [
+            'naver-clova-ix/donut-base-finetuned-docvqa',
+        ];
+        const image = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/invoice.png';
+        const question = 'What is the invoice number?';
+
+        it(models[0], async () => {
+            let qa_pipeline = await pipeline('document-question-answering', m(models[0]));
+
+            // basic
+            {
+                let output = await qa_pipeline(image, question);
+                let expected = [{ answer: 'us-001' }];
+                compare(output, expected);
+            }
+
+            await qa_pipeline.dispose();
+
+        }, MAX_TEST_EXECUTION_TIME);
+    });
+
 });
